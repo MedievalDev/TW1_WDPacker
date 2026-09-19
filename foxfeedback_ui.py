@@ -30,7 +30,8 @@ from tkinter import filedialog, messagebox, ttk
 
 import foxfeedback
 
-UI_VERSION = 2
+UI_VERSION = 3
+CONFIRM_NEEDED = 2          # the server confirms a test after 2 passes from different PCs
 NL = chr(10)
 
 TEXTS = {
@@ -63,6 +64,12 @@ TEXTS = {
         'test.state.confirmed': 'Neu in {since}. BESTAETIGT: {ok} x funktioniert.',
         'test.state.failed': 'Neu in {since}. FEHLER GEMELDET ({bad} x funktioniert nicht). Wird untersucht.',
         'test.state.closed': 'Neu in {since}. Abgeschlossen.',
+        'test.bar.none': 'Noch keine Rueckmeldung. Deine waere die erste von {need}.',
+        'test.bar.some': '{ok} von {need} Bestaetigungen. Es fehlt noch eine von einem anderen Rechner.',
+        'test.bar.confirmed': 'Test bestanden: {ok} Bestaetigungen von verschiedenen Rechnern.',
+        'test.bar.failed': 'Test gescheitert: {bad} x hat es nicht funktioniert. Wird untersucht.',
+        'test.mine.pass': 'Von diesem Rechner schon als "funktioniert" gemeldet.',
+        'test.mine.fail': 'Von diesem Rechner schon als "funktioniert nicht" gemeldet.',
         'test.steps': 'Schritte',
         'test.expect': 'So muss es am Ende aussehen',
         'test.run': 'Starten',
@@ -135,6 +142,12 @@ TEXTS = {
         'test.state.confirmed': 'New in {since}. CONFIRMED: {ok} x works.',
         'test.state.failed': 'New in {since}. FAILURE REPORTED ({bad} x does not work). Being looked into.',
         'test.state.closed': 'New in {since}. Closed.',
+        'test.bar.none': 'No feedback yet. Yours would be the first of {need}.',
+        'test.bar.some': '{ok} of {need} confirmations. One more from another PC is missing.',
+        'test.bar.confirmed': 'Test passed: {ok} confirmations from different PCs.',
+        'test.bar.failed': 'Test failed: {bad} x did not work. Being looked into.',
+        'test.mine.pass': 'Already reported as "works" from this PC.',
+        'test.mine.fail': 'Already reported as "does not work" from this PC.',
         'test.steps': 'Steps',
         'test.expect': 'What it must look like at the end',
         'test.run': 'Start',
@@ -628,6 +641,18 @@ class FeedbackUI:
         rec = ((self.summary or {}).get('tests') or {}).get(test_id) or {}
         return int(rec.get('pass') or 0), int(rec.get('fail') or 0)
 
+    def mine(self, test_id):
+        """What this PC reported for the test: 'pass', 'fail' or ''."""
+        sent = self.cfg_get('test_sent', None) or {}
+        return sent.get(test_id, '') if isinstance(sent, dict) else ''
+
+    def remember(self, test_id, passed):
+        sent = self.cfg_get('test_sent', None) or {}
+        if not isinstance(sent, dict):
+            sent = {}
+        sent[test_id] = 'pass' if passed else 'fail'
+        self.cfg_set('test_sent', sent)
+
     def can_report(self, test_id):
         """False when the server was reached and does not take the test
         (not created there yet, or closed) - it would answer 400."""
@@ -853,7 +878,10 @@ class TestWindow:
             st = fb.state(x['id'])
             mark = {'confirmed': '✓', 'failed': '!', 'closed': '-'
                     }.get(st, '○')
-            self.lst.insert('end', f' {mark}  {fb.loc(x["title"])}')
+            ok, bad = fb.counts(x['id'])
+            need = max(CONFIRM_NEEDED, ok)
+            tail = f'  ({ok}/{need})' if st in ('open', 'confirmed') and ok                 else (f'  ({bad} x !)' if bad else '')
+            self.lst.insert('end', f' {mark}  {fb.loc(x["title"])}{tail}')
             if st in colours:
                 self.lst.itemconfigure(i, foreground=colours[st])
         text = fb.t('test.server.ok' if fb.summary is not None
@@ -900,6 +928,7 @@ class TestWindow:
         ttk.Label(r, text=t('test.state.' + fb.state(x['id']),
                             since=x.get('since', '?'), ok=ok, bad=bad),
                   style=_style('Muted.TLabel')).pack(anchor='w', pady=(2, 6))
+        self._bar(r, x)
         ttk.Label(r, text=fb.loc(x.get('why')), wraplength=640,
                   justify='left').pack(anchor='w', pady=(0, 8))
         bottom = ttk.Frame(r)
@@ -961,6 +990,40 @@ class TestWindow:
                                                            padx=8)
         ttk.Button(btns, text=t('close'), command=self.close
                    ).pack(side='right')
+
+    def _bar(self, parent, x):
+        """How far the test is: one bar tick per confirmation (design 11a)."""
+        fb, t = self.fb, self.fb.t
+        ok, bad = fb.counts(x['id'])
+        state = fb.state(x['id'])
+        need = max(CONFIRM_NEEDED, ok)
+        if state == 'failed':
+            key, colour, filled = 'test.bar.failed', COLORS['err'], need
+        elif state in ('confirmed', 'closed'):
+            key, colour, filled = 'test.bar.confirmed', COLORS['ok'], need
+        elif ok:
+            key, colour, filled = 'test.bar.some', COLORS['gold'], ok
+        else:
+            key, colour, filled = 'test.bar.none', COLORS['mut'], 0
+        box = ttk.Frame(parent)
+        box.pack(anchor='w', fill='x', pady=(2, 6))
+        w, h, gap = 150, 12, 4
+        c = tk.Canvas(box, width=w, height=h, highlightthickness=0,
+                      background=COLORS['bg'], bd=0)
+        c.pack(side='left')
+        step = (w - gap * (need - 1)) / need if need else w
+        for i in range(need):
+            x0 = i * (step + gap)
+            c.create_rectangle(x0, 0, x0 + step, h, width=0,
+                               fill=colour if i < filled else '#2a241c')
+        ttk.Label(box, text=t(key, ok=ok, bad=bad, need=need),
+                  style=_style('Muted.TLabel'), wraplength=470,
+                  justify='left').pack(side='left', padx=8)
+        mine = fb.mine(x['id'])
+        if mine:
+            ttk.Label(parent, text=t('test.mine.' + mine),
+                      foreground=COLORS['ok'] if mine == 'pass'
+                      else COLORS['err']).pack(anchor='w', pady=(0, 4))
 
     def start_run(self):
         fb = self.fb
@@ -1039,8 +1102,16 @@ class TestWindow:
             fb.tool, fb.version, fb.client_id(), fb.lang, x['id'], passed,
             message=note, log=fb.log.text(),
             game_log=self.session.text() if self.session else '')
+        def sent():
+            fb.remember(x['id'], passed)
+
+            def shown():
+                self._fill_list()
+                self.test = None          # rebuild the panel with the new count
+                self.select(x['id'])
+            fb.refresh(shown)
         fb.preview(self.win, payload, lambda: fb.send(
-            payload, self.win, on_ok=self._fill_list))
+            payload, self.win, on_ok=sent))
 
 
 class BugWindow:
