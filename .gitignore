@@ -1,0 +1,7 @@
+__pycache__/
+dist/
+build/
+*.spec
+wd_packer_settings.json
+backup/
+*.wdtmp

@@ -1,0 +1,71 @@
+{
+  "format": 1,
+  "tests": [
+    {
+      "id": "repack-mod-ingame",
+      "since": "1.0.0",
+      "needs_run": true,
+      "title": {
+        "de": "Eine Mod entpacken, wieder packen und spielen",
+        "en": "Unpack a mod, pack it again and play"
+      },
+      "why": {
+        "de": "Nach Entpacken und Packen hat jede Datei denselben Inhalt und dieselben Metadaten wie vorher - gemessen am Spiel und an sieben Mods. Ob das Spiel die neu gepackte Mod genauso laedt, hat noch niemand im Spiel gesehen.",
+        "en": "After unpacking and packing every file has the same content and metadata as before - measured on the game and seven mods. Whether the game loads the repacked mod the same way has not been seen in the game yet."
+      },
+      "steps": {
+        "de": [
+          "Eine Mod, die du kennst, aus dem Ordner Mods des Spiels auf den Desktop kopieren (zum Beispiel eine, die Werte oder Quests aendert).",
+          "Die Kopie auf das Fenster des WD Packers ziehen. Daneben entsteht ein Ordner.",
+          "Diesen Ordner auf das Fenster ziehen. Daneben entsteht wieder eine .wd.",
+          "Die neue .wd statt der alten in den Ordner Mods legen (die alte vorher woanders hin sichern).",
+          "Unten auf \"Starten\" klicken und ein neues Spiel beginnen.",
+          "Pruefen: Die Mod wirkt wie vorher. Spiel beenden und hier das Ergebnis waehlen."
+        ],
+        "en": [
+          "Copy a mod you know from the game's Mods folder to the desktop (for example one that changes values or quests).",
+          "Drag the copy onto the WD Packer window. A folder appears next to it.",
+          "Drag that folder onto the window. A .wd appears next to it again.",
+          "Put the new .wd into the Mods folder instead of the old one (keep the old one somewhere else first).",
+          "Click \"Start\" below and begin a new game.",
+          "Check: the mod works as before. Quit the game and pick the result here."
+        ]
+      },
+      "expect": {
+        "de": "Das Spiel startet, und die Mod wirkt genauso wie mit der Original-Datei.",
+        "en": "The game starts, and the mod works exactly as with the original file."
+      }
+    },
+    {
+      "id": "drop-with-the-mouse",
+      "since": "1.0.0",
+      "needs_run": false,
+      "title": {
+        "de": "Eine .wd und einen Ordner mit der Maus ablegen",
+        "en": "Drop a .wd and a folder with the mouse"
+      },
+      "why": {
+        "de": "Das Ablegen ist mit einer nachgestellten Windows-Nachricht geprueft, nicht mit einer echten Mausbewegung aus dem Explorer.",
+        "en": "Dropping is checked with a simulated Windows message, not with a real mouse drag from Explorer."
+      },
+      "steps": {
+        "de": [
+          "Im Explorer eine .wd-Datei auf die grosse Flaeche des Fensters ziehen und loslassen.",
+          "Pruefen: Der Balken laeuft, danach steht unten, wohin entpackt wurde.",
+          "Den entstandenen Ordner auf die Flaeche ziehen.",
+          "Pruefen: Daneben entsteht eine .wd, unten steht \"Gepackt und geprueft\"."
+        ],
+        "en": [
+          "In Explorer drag a .wd file onto the big area of the window and let go.",
+          "Check: the bar runs, afterwards the window says where it was unpacked to.",
+          "Drag the new folder onto the area.",
+          "Check: a .wd appears next to it, the window says \"Packed and checked\"."
+        ]
+      },
+      "expect": {
+        "de": "Beides funktioniert mit der Maus, ohne Fehlermeldung und ohne Absturz.",
+        "en": "Both work with the mouse, without an error message and without a crash."
+      }
+    }
+  ]
+}
