@@ -194,8 +194,23 @@ class Guide:
         self.win.bind('<Escape>', lambda e: self.finish(self.dont.get()))
         self.win.bind('<Return>', lambda e: self.nxt())
         self.show()
+        self.place()
+        try:                                   # sonst geht er hinter dem Fenster auf
+            self.win.lift()
+            self.win.attributes('-topmost', True)
+        except tk.TclError:
+            pass
+
+    def place(self):
+        """Rechts neben das Fenster, sonst hinein - nie aus dem Bildschirm."""
         r = self.app.root
-        self.win.geometry(f'+{r.winfo_rootx() + r.winfo_width() + 8}+{r.winfo_rooty() + 60}')
+        self.win.update_idletasks()
+        w, h = self.win.winfo_width(), self.win.winfo_height()
+        x, y = r.winfo_rootx() + r.winfo_width() + 8, r.winfo_rooty() + 60
+        if x + w > r.winfo_screenwidth():
+            x = max(0, r.winfo_rootx() + 16)
+        y = min(y, max(0, r.winfo_screenheight() - h - 40))
+        self.win.geometry(f'+{x}+{y}')
 
     def show(self):
         s = GUIDE_STEPS[self.i]
